@@ -5,9 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>QR 코드 생성기</title>
   <style>
-    * {
-      box-sizing: border-box;
-    }
+    * { box-sizing: border-box; }
 
     body {
       font-family: Arial, sans-serif;
@@ -20,23 +18,54 @@
     }
 
     h1 {
-      color: #333;
       font-size: 1.8rem;
-      margin-bottom: 1.5rem;
+      margin-bottom: 1rem;
       text-align: center;
+      color: #333;
     }
 
-    input {
+    .tabs {
+      display: flex;
+      justify-content: center;
+      margin-bottom: 1rem;
+      flex-wrap: wrap;
+    }
+
+    .tab-btn {
+      padding: 0.6rem 1rem;
+      margin: 0.3rem;
+      border: none;
+      background: #ddd;
+      border-radius: 4px;
+      cursor: pointer;
+      font-weight: bold;
+    }
+
+    .tab-btn.active {
+      background: #0066ff;
+      color: white;
+    }
+
+    .form-section {
+      display: none;
       width: 100%;
       max-width: 400px;
-      padding: 0.75rem;
-      font-size: 1rem;
-      border: 1px solid #ccc;
-      border-radius: 6px;
-      margin-bottom: 1rem;
     }
 
-    button {
+    .form-section.active {
+      display: block;
+    }
+
+    input, select {
+      width: 100%;
+      padding: 0.75rem;
+      font-size: 1rem;
+      margin: 0.5rem 0;
+      border: 1px solid #ccc;
+      border-radius: 6px;
+    }
+
+    button.generate {
       width: 100%;
       max-width: 400px;
       padding: 0.75rem;
@@ -46,11 +75,7 @@
       border: none;
       border-radius: 6px;
       cursor: pointer;
-      transition: background-color 0.3s ease;
-    }
-
-    button:hover {
-      background-color: #004dc1;
+      margin-top: 1rem;
     }
 
     #qrcode-container {
@@ -65,43 +90,75 @@
     }
 
     @media (max-width: 480px) {
-      h1 {
-        font-size: 1.5rem;
-      }
-
-      input,
-      button {
-        font-size: 0.95rem;
-        padding: 0.65rem;
-      }
+      h1 { font-size: 1.5rem; }
+      input, button, select { font-size: 0.95rem; padding: 0.65rem; }
     }
   </style>
 </head>
 <body>
   <h1>QR 코드 생성기</h1>
-  <input type="text" id="text" placeholder="텍스트 또는 URL 입력" />
-  <button onclick="generateQRCode()">QR 코드 생성</button>
+
+  <div class="tabs">
+    <button class="tab-btn active" onclick="switchTab('text')">일반 텍스트</button>
+    <button class="tab-btn" onclick="switchTab('wifi')">Wi-Fi 연결</button>
+  </div>
+
+  <!-- 일반 텍스트 입력 -->
+  <div class="form-section active" id="form-text">
+    <input type="text" id="text-input" placeholder="텍스트 또는 URL 입력" />
+  </div>
+
+  <!-- Wi-Fi 입력 -->
+  <div class="form-section" id="form-wifi">
+    <input type="text" id="ssid" placeholder="Wi-Fi SSID" />
+    <input type="password" id="password" placeholder="비밀번호" />
+    <select id="encryption">
+      <option value="WPA">WPA/WPA2</option>
+      <option value="WEP">WEP</option>
+      <option value="nopass">암호 없음</option>
+    </select>
+  </div>
+
+  <button class="generate" onclick="generateQRCode()">QR 코드 생성</button>
 
   <div id="qrcode-container">
     <div id="qrcode"></div>
   </div>
 
-  <!-- QRCode.js 라이브러리 -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
   <script>
+    function switchTab(type) {
+      document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
+      document.querySelectorAll('.form-section').forEach(section => section.classList.remove('active'));
+
+      document.getElementById(`form-${type}`).classList.add('active');
+      event.target.classList.add('active');
+    }
+
     function generateQRCode() {
       const container = document.getElementById("qrcode");
-      const text = document.getElementById("text").value.trim();
+      container.innerHTML = ""; // 기존 QR 제거
+      const activeTab = document.querySelector(".tab-btn.active").textContent;
 
-      if (!text) {
-        alert("텍스트를 입력하세요.");
-        return;
+      let qrData = "";
+
+      if (activeTab.includes("일반")) {
+        const text = document.getElementById("text-input").value.trim();
+        if (!text) return alert("텍스트를 입력하세요.");
+        qrData = text;
+      } else {
+        const ssid = document.getElementById("ssid").value.trim();
+        const pass = document.getElementById("password").value.trim();
+        const enc = document.getElementById("encryption").value;
+
+        if (!ssid) return alert("SSID를 입력하세요.");
+        if (enc !== "nopass" && !pass) return alert("비밀번호를 입력하세요.");
+
+        qrData = `WIFI:T:${enc};S:${ssid};P:${pass};;`;
       }
 
-      container.innerHTML = ""; // 기존 QR 제거
-
       new QRCode(container, {
-        text: text,
+        text: qrData,
         width: 256,
         height: 256,
         colorDark: "#000000",
