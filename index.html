@@ -5,42 +5,74 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>QR 코드 생성기</title>
   <style>
+    * {
+      box-sizing: border-box;
+    }
+
     body {
       font-family: Arial, sans-serif;
-      text-align: center;
       background: #f9f9f9;
-      padding: 2rem;
+      padding: 2rem 1rem;
+      margin: 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
     }
+
     h1 {
       color: #333;
+      font-size: 1.8rem;
+      margin-bottom: 1.5rem;
+      text-align: center;
     }
+
     input {
-      width: 80%;
+      width: 100%;
       max-width: 400px;
-      padding: 0.6rem;
-      margin: 1rem 0;
+      padding: 0.75rem;
       font-size: 1rem;
+      border: 1px solid #ccc;
+      border-radius: 6px;
+      margin-bottom: 1rem;
     }
+
     button {
-      padding: 0.6rem 1.2rem;
+      width: 100%;
+      max-width: 400px;
+      padding: 0.75rem;
       font-size: 1rem;
       background-color: #0066ff;
       color: white;
       border: none;
       border-radius: 6px;
       cursor: pointer;
+      transition: background-color 0.3s ease;
     }
+
+    button:hover {
+      background-color: #004dc1;
+    }
+
     #qrcode-container {
+      margin-top: 2rem;
+      width: 100%;
       display: flex;
       justify-content: center;
-      margin-top: 2rem;
     }
+
     #qrcode {
       width: auto;
     }
-    @media (max-width: 600px) {
-      input {
-        width: 100%;
+
+    @media (max-width: 480px) {
+      h1 {
+        font-size: 1.5rem;
+      }
+
+      input,
+      button {
+        font-size: 0.95rem;
+        padding: 0.65rem;
       }
     }
   </style>
@@ -48,14 +80,13 @@
 <body>
   <h1>QR 코드 생성기</h1>
   <input type="text" id="text" placeholder="텍스트 또는 URL 입력" />
-  <br/>
   <button onclick="generateQRCode()">QR 코드 생성</button>
 
   <div id="qrcode-container">
     <div id="qrcode"></div>
   </div>
 
-  <!-- QRCode.js 라이브러리 (CDN) -->
+  <!-- QRCode.js 라이브러리 -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
   <script>
     function generateQRCode() {
