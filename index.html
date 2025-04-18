@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>QR 코드 생성기</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      text-align: center;
+      background: #f9f9f9;
+      padding: 2rem;
+    }
+    h1 {
+      color: #333;
+    }
+    input {
+      width: 80%;
+      max-width: 400px;
+      padding: 0.6rem;
+      margin: 1rem 0;
+      font-size: 1rem;
+    }
+    button {
+      padding: 0.6rem 1.2rem;
+      font-size: 1rem;
+      background-color: #0066ff;
+      color: white;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+    }
+    #qrcode-container {
+      display: flex;
+      justify-content: center;
+      margin-top: 2rem;
+    }
+    #qrcode {
+      width: auto;
+    }
+    @media (max-width: 600px) {
+      input {
+        width: 100%;
+      }
+    }
+  </style>
+</head>
+<body>
+  <h1>QR 코드 생성기</h1>
+  <input type="text" id="text" placeholder="텍스트 또는 URL 입력" />
+  <br/>
+  <button onclick="generateQRCode()">QR 코드 생성</button>
+
+  <div id="qrcode-container">
+    <div id="qrcode"></div>
+  </div>
+
+  <!-- QRCode.js 라이브러리 (CDN) -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+  <script>
+    function generateQRCode() {
+      const container = document.getElementById("qrcode");
+      const text = document.getElementById("text").value.trim();
+
+      if (!text) {
+        alert("텍스트를 입력하세요.");
+        return;
+      }
+
+      container.innerHTML = ""; // 기존 QR 제거
+
+      new QRCode(container, {
+        text: text,
+        width: 256,
+        height: 256,
+        colorDark: "#000000",
+        colorLight: "#ffffff",
+        correctLevel: QRCode.CorrectLevel.H
+      });
+    }
+  </script>
+</body>
+</html>
