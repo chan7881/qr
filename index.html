@@ -78,6 +78,50 @@
       margin-top: 1rem;
     }
 
+    .hint {
+      font-size: 0.85rem;
+      color: #666;
+      margin: 0 0 0.5rem;
+    }
+
+    .error {
+      color: #c00000;
+      font-size: 0.9rem;
+      margin-top: 0.75rem;
+      width: 100%;
+      max-width: 400px;
+    }
+
+    .short-result {
+      display: none;
+      width: 100%;
+      max-width: 400px;
+      margin-top: 1.5rem;
+      gap: 0.5rem;
+    }
+
+    .short-result.active {
+      display: flex;
+    }
+
+    .short-result input {
+      margin: 0;
+      flex: 1;
+      min-width: 0;
+      background: #fff;
+    }
+
+    .short-result button {
+      min-height: 44px;
+      padding: 0 1rem;
+      border: none;
+      border-radius: 6px;
+      background: #333;
+      color: white;
+      cursor: pointer;
+      white-space: nowrap;
+    }
+
     #qrcode-container {
       margin-top: 2rem;
       width: 100%;
@@ -103,6 +147,7 @@
   <div class="tabs">
     <button class="tab-btn active" onclick="switchTab('text')">일반 텍스트</button>
     <button class="tab-btn" onclick="switchTab('wifi')">Wi-Fi 연결</button>
+    <button class="tab-btn" onclick="switchTab('short')">단축 링크</button>
   </div>
 
   <!-- 일반 텍스트 입력 -->
@@ -121,7 +166,21 @@
     </select>
   </div>
 
-  <button class="generate" onclick="generateQRCode()">QR 코드 생성</button>
+  <!-- 단축 링크 입력 -->
+  <div class="form-section" id="form-short">
+    <input type="url" id="long-url" placeholder="줄일 주소 (https://...)" inputmode="url" autocomplete="off" />
+    <input type="text" id="alias" placeholder="원하는 이름 (선택)" maxlength="30" autocomplete="off" autocapitalize="off" spellcheck="false" />
+    <p class="hint">이름은 영문·숫자·밑줄(_) 5~30자. 비우면 자동으로 정해집니다. 예) is.gd/<b>science_3_1</b></p>
+  </div>
+
+  <button class="generate" id="generate-btn" onclick="generateQRCode()">QR 코드 생성</button>
+
+  <div class="error" id="error" role="alert"></div>
+
+  <div class="short-result" id="short-result">
+    <input type="text" id="short-url" readonly aria-label="단축 링크" />
+    <button type="button" id="copy-btn" onclick="copyShortUrl()">복사</button>
+  </div>
 
   <div id="qrcode-container">
     <div id="qrcode"></div>
@@ -129,26 +188,84 @@
 
   <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
   <script>
+    let currentTab = 'text';
+
     function switchTab(type) {
       document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
       document.querySelectorAll('.form-section').forEach(section => section.classList.remove('active'));
 
       document.getElementById(`form-${type}`).classList.add('active');
       event.target.classList.add('active');
+
+      currentTab = type;
+      document.getElementById("generate-btn").textContent =
+        type === 'short' ? "단축 링크 만들기" : "QR 코드 생성";
+      document.getElementById("qrcode").innerHTML = "";
+      document.getElementById("short-result").classList.remove("active");
+      showError("");
     }
 
-    function generateQRCode() {
+    function showError(msg) {
+      document.getElementById("error").textContent = msg;
+    }
+
+    // 주소 앞에 http(s)://가 없으면 붙인다
+    function normalizeUrl(url) {
+      url = url.trim();
+      if (url && !/^[a-z][a-z0-9+.-]*:\/\//i.test(url)) url = "https://" + url;
+      return url;
+    }
+
+    // is.gd 규칙: 영문·숫자·밑줄 5~30자
+    function aliasError(alias) {
+      if (!alias) return "";
+      if (!/^[A-Za-z0-9_]+$/.test(alias)) return "이름에는 영문·숫자·밑줄(_)만 쓸 수 있습니다.";
+      if (alias.length < 5) return "이름은 5자 이상이어야 합니다.";
+      if (alias.length > 30) return "이름은 30자 이하여야 합니다.";
+      return "";
+    }
+
+    function shortenErrorMessage(data) {
+      if (data.errorcode === 1) return "주소가 올바르지 않습니다. 주소를 다시 확인하세요.";
+      if (data.errorcode === 2 && /exists/.test(data.errormessage)) return "이미 쓰이고 있는 이름입니다. 다른 이름을 넣으세요.";
+      if (data.errorcode === 3) return "요청이 너무 많습니다. 잠시 뒤에 다시 시도하세요.";
+      return "단축하지 못했습니다: " + (data.errormessage || "알 수 없는 오류");
+    }
+
+    async function shortenUrl(longUrl, alias) {
+      const params = new URLSearchParams({ format: "json", url: longUrl });
+      if (alias) params.set("shorturl", alias);
+      const res = await fetch("https://is.gd/create.php?" + params.toString());
+      const data = await res.json();
+      if (!data.shorturl) throw new Error(shortenErrorMessage(data));
+      return data.shorturl;
+    }
+
+    async function copyShortUrl() {
+      const field = document.getElementById("short-url");
+      const btn = document.getElementById("copy-btn");
+      try {
+        await navigator.clipboard.writeText(field.value);
+      } catch (e) {
+        field.select();
+        document.execCommand("copy");
+      }
+      btn.textContent = "복사됨";
+      setTimeout(() => { btn.textContent = "복사"; }, 1500);
+    }
+
+    async function generateQRCode() {
       const container = document.getElementById("qrcode");
       container.innerHTML = ""; // 기존 QR 제거
-      const activeTab = document.querySelector(".tab-btn.active").textContent;
+      showError("");
 
       let qrData = "";
 
-      if (activeTab.includes("일반")) {
+      if (currentTab === 'text') {
         const text = document.getElementById("text-input").value.trim();
         if (!text) return alert("텍스트를 입력하세요.");
         qrData = text;
-      } else {
+      } else if (currentTab === 'wifi') {
         const ssid = document.getElementById("ssid").value.trim();
         const pass = document.getElementById("password").value.trim();
         const enc = document.getElementById("encryption").value;
@@ -157,6 +274,29 @@
         if (enc !== "nopass" && !pass) return alert("비밀번호를 입력하세요.");
 
         qrData = `WIFI:T:${enc};S:${ssid};P:${pass};;`;
+      } else {
+        const longUrl = normalizeUrl(document.getElementById("long-url").value);
+        const alias = document.getElementById("alias").value.trim();
+        const result = document.getElementById("short-result");
+        const btn = document.getElementById("generate-btn");
+        result.classList.remove("active");
+
+        if (!longUrl) return showError("줄일 주소를 입력하세요.");
+        const err = aliasError(alias);
+        if (err) return showError(err);
+
+        btn.disabled = true;
+        btn.textContent = "만드는 중…";
+        try {
+          qrData = await shortenUrl(longUrl, alias);
+        } catch (e) {
+          return showError(e instanceof TypeError ? "단축 서비스에 연결하지 못했습니다. 인터넷 연결을 확인하세요." : e.message);
+        } finally {
+          btn.disabled = false;
+          btn.textContent = "단축 링크 만들기";
+        }
+        document.getElementById("short-url").value = qrData;
+        result.classList.add("active");
       }
 
       new QRCode(container, {
